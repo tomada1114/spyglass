@@ -34,8 +34,10 @@ the lens vanish instantly. Clicking through the lens raises the revealed window.
 - Default: **hold the right ⌘ (Command) key alone**. Engages after a short
   hold threshold of **150 ms** (prevents flicker during normal right-⌘ shortcut
   use). Configurable in Settings: `Right ⌘` (default) / `⌃⌥ (Control+Option)` /
-  `fn`. Detected via a `CGEventTap` on `flagsChanged` (requires Accessibility
-  permission — see 2.4).
+  `fn`. Detected via global `NSEvent.addGlobalMonitorForEvents(matching:
+  [.flagsChanged, .keyDown])` (requires Accessibility permission — see 2.4);
+  right vs left ⌘ is distinguished by `keyCode` (right ⌘ = 54). A `CGEventTap`
+  is an acceptable alternative but not required — nothing needs to be consumed.
 - The lens is active **only while the key is held**. Release → lens disappears
   immediately (fade-out ≤ 120 ms).
 - If another modifier or any regular key is pressed while holding the trigger,
