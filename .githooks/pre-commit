@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Fast pre-commit gate: lint the staged Swift files.
+# Installed by `just install` (git config core.hooksPath .githooks).
+#
+# The staged blobs are exported with checkout-index and linted from there, so
+# a partially staged file is checked as it will be committed — not as it sits
+# in the worktree. --diff-filter includes R so renamed files stay covered.
+set -euo pipefail
+
+STAGED_SWIFT_FILES=()
+while IFS= read -r -d '' file; do
+    STAGED_SWIFT_FILES+=("${file}")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR -- '*.swift')
+
+if [ ${#STAGED_SWIFT_FILES[@]} -eq 0 ]; then
+    exit 0
+fi
+
+echo "pre-commit: checking the staged content of ${#STAGED_SWIFT_FILES[@]} Swift file(s)"
+
+STAGED_TREE=$(mktemp -d)
+trap 'rm -rf "${STAGED_TREE}"' EXIT
+git checkout-index --prefix="${STAGED_TREE}/" -- "${STAGED_SWIFT_FILES[@]}"
+
+mise exec -- swiftformat --lint --config .swiftformat "${STAGED_TREE}"
+mise exec -- swiftlint lint --strict --quiet --config .swiftlint.yml "${STAGED_TREE}"

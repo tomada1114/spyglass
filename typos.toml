@@ -1,0 +1,2 @@
+[files]
+extend-exclude = ["*.xcassets", ".build", "Package.resolved"]
