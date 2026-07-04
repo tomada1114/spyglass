@@ -168,14 +168,15 @@ Permission-status detection (patterns verified against Ice/Loop source):
 
 `SpyglassUI` (SwiftUI/AppKit; thin):
 - `LensOverlayController` (NSPanel + Metal/CALayer-backed content view),
-  `CaptureEngine` (SCStream wrapper), `EventTapMonitor`, `MenuBar`,
-  `SettingsView`, `OnboardingView`.
+  `CaptureEngine` (SCStream wrapper), `EventMonitor` (global/local NSEvent
+  monitors), `MenuBar`, `SettingsView`, `OnboardingView`.
 
 App target: `@main` wiring only.
 
 ### 3.2 Error handling
 
-- Event tap disabled by system (`tapDisabledByTimeout`) → re-enable immediately; log.
+- Event monitoring stops delivering (e.g. `tapDisabledByTimeout` when a
+  CGEventTap is used) → re-register/re-enable immediately; log.
 - SCStream error/stop → tear down, lens shows empty state; retry on next target change.
 - Permission revoked mid-session → end peek, switch menu icon to warning state,
   show onboarding on next trigger attempt.
