@@ -2,6 +2,16 @@
 
 ## Overview
 
+**Spyglass**: hold a key, and a circular lens follows the cursor showing the
+live content of the window hidden beneath the frontmost window (X-ray peek);
+release, and it vanishes. Free OSS menu bar utility.
+
+The product is fully specified — read these before implementing anything:
+
+- `docs/requirements.md` — behavior, states, APIs, scope (normative)
+- `docs/design.md` — exact colors, sizes, animations, symbols (normative)
+- `docs/wireframes.md` — layouts and user flows
+
 This is a macOS SwiftUI app built from a strict template: XcodeGen generates the
 Xcode project from `project.yml`, all real code lives in a local Swift package
 (`Packages/SpyglassKit`), and quality gates (SwiftLint strict, SwiftFormat, Swift 6
