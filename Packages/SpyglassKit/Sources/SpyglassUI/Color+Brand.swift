@@ -10,4 +10,7 @@ extension Color {
     static let stageBackground = Color("stageBackground", bundle: Bundle.module)
     static let stageWindowFront = Color("stageWindowFront", bundle: Bundle.module)
     static let stageWindowBack = Color("stageWindowBack", bundle: Bundle.module)
+    static let trafficRed = Color("trafficRed", bundle: Bundle.module)
+    static let trafficYellow = Color("trafficYellow", bundle: Bundle.module)
+    static let trafficGreen = Color("trafficGreen", bundle: Bundle.module)
 }
