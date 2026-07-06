@@ -1,121 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// One captured window frame plus where the lens circle sits inside it.
-public struct LensFrame {
-    /// The latest frame ScreenCaptureKit delivered for the target window.
-    public let image: CGImage
-    /// The frame's size in points (the target window's size).
-    public let imageSize: CGSize
-    /// Top-left of the lens circle in window-local points — computed by
-    /// `LensGeometry.captureCrop` so the visible region matches screen
-    /// coordinates 1:1 (the hole illusion).
-    public let cropOrigin: CGPoint
-
-    /// Bundles one frame for rendering; the overlay is the only producer.
-    public init(image: CGImage, imageSize: CGSize, cropOrigin: CGPoint) {
-        self.image = image
-        self.imageSize = imageSize
-        self.cropOrigin = cropOrigin
-    }
-}
-
-/// What fills the lens circle (`docs/design.md` §4).
-public enum LensContent {
-    /// State B: frosted material + dashed-circle symbol.
-    case empty
-    /// State A: a live capture frame, screen-aligned.
-    case frame(LensFrame)
-    /// The settings live preview: stage fill + brass chart glyph.
-    case settingsPlaceholder
-    /// Chrome only — the onboarding demo draws its own reveal underneath.
-    case transparent
-}
-
-/// The identity line under the lens: target app icon + window title.
-public struct LensCaption: Equatable {
-    /// The target app's icon, rendered at 14 pt.
-    public let appIcon: NSImage?
-    /// The target window's title, middle-truncated.
-    public let title: String
-
-    /// Groups the pill's two data points.
-    public init(appIcon: NSImage?, title: String) {
-        self.appIcon = appIcon
-        self.title = title
-    }
-}
-
-/// Motion tokens from `docs/design.md` §4 — owned here so the overlay and
-/// any preview animate identically. Reduce Motion drops every scale change
-/// but keeps these durations (opacity-only).
-public enum LensMotion {
-    private static let appearResponse = 0.28
-    private static let appearDamping = 0.78
-    private static let dismissDuration = 0.12
-    private static let swapDuration = 0.1
-    private static let clickResponse = 0.18
-    private static let clickDamping = 0.7
-
-    /// Appear: spring, anchored at the cursor.
-    public static let appear = Animation.spring(
-        response: appearResponse,
-        dampingFraction: appearDamping,
-    )
-    /// Scale the lens appears from.
-    public static let appearScale: CGFloat = 0.86
-    /// Dismiss on key-up: ≤ 120 ms fade.
-    public static let dismiss = Animation.easeOut(duration: dismissDuration)
-    /// Scale the lens dismisses toward.
-    public static let dismissScale: CGFloat = 0.94
-    /// Target swap: content cross-fades through empty, 100 ms each way.
-    public static let swapFade = Animation.easeInOut(duration: swapDuration)
-    /// Click-to-raise flash spring; total feedback stays ≤ 250 ms.
-    public static let clickFlash = Animation.spring(
-        response: clickResponse,
-        dampingFraction: clickDamping,
-    )
-    /// Scale pulse peak during the click flash.
-    public static let clickScale: CGFloat = 1.06
-}
-
-/// Every fixed number in `docs/design.md` §4, named so deviations from the
-/// spec are diffable (and for the no-magic-numbers gate).
-private enum Metrics {
-    /// The content circle is rim diameter − 4.
-    static let contentInset: CGFloat = 4
-    /// Diameter → radius divisor.
-    static let radiusDivisor: CGFloat = 2
-    static let vignetteClearRadius: CGFloat = 0.78
-    static let vignetteEdgeOpacity = 0.08
-    static let innerEdgeWidth: CGFloat = 1
-    static let innerEdgeTopOpacity = 0.4
-    static let innerEdgeBottomOpacity = 0.15
-    static let rimWidth: CGFloat = 2
-    static let rimMidStop: CGFloat = 0.55
-    static let specularStartDegrees: CGFloat = 190
-    static let specularEndDegrees: CGFloat = 240
-    static let fullTurnDegrees: CGFloat = 360
-    static let specularWidth: CGFloat = 3
-    static let specularOpacity = 0.6
-    static let specularBlur: CGFloat = 4
-    static let shadowOpacityLight = 0.2
-    static let shadowOpacityDark = 0.28
-    static let shadowRadius: CGFloat = 12
-    static let captionSpacing: CGFloat = 8
-    static let captionInnerSpacing: CGFloat = 4
-    static let captionHeight: CGFloat = 24
-    static let captionHorizontalPadding: CGFloat = 10
-    static let captionIconSize: CGFloat = 14
-    static let captionFontSize: CGFloat = 13
-    static let captionMaxWidth: CGFloat = 260
-    static let captionFadeDelay: TimeInterval = 0.08
-    static let captionFadeDuration: TimeInterval = 0.1
-    static let emptySymbolSize: CGFloat = 28
-    static let emptySymbolOpacity = 0.4
-    static let placeholderGlyphSize: CGFloat = 20
-}
-
 /// Preview-only sizing.
 private enum PreviewMetrics {
     static let diameter: CGFloat = 320
@@ -129,29 +14,29 @@ private struct CaptionPill: View {
     @State private var visible = false
 
     var body: some View {
-        HStack(spacing: Metrics.captionInnerSpacing) {
+        HStack(spacing: LensMetrics.captionInnerSpacing) {
             if let icon = caption.appIcon {
                 Image(nsImage: icon)
                     .resizable()
-                    .frame(width: Metrics.captionIconSize, height: Metrics.captionIconSize)
+                    .frame(width: LensMetrics.captionIconSize, height: LensMetrics.captionIconSize)
                     .accessibilityHidden(true)
             }
             Text(caption.title)
-                .font(.system(size: Metrics.captionFontSize, weight: .medium))
+                .font(.system(size: LensMetrics.captionFontSize, weight: .medium))
                 .truncationMode(.middle)
                 .lineLimit(1)
         }
-        .padding(.horizontal, Metrics.captionHorizontalPadding)
-        .frame(height: Metrics.captionHeight)
+        .padding(.horizontal, LensMetrics.captionHorizontalPadding)
+        .frame(height: LensMetrics.captionHeight)
         // Background before the width cap so the capsule hugs short titles;
         // the outer frame only limits the proposal (→ middle truncation).
         .background(.ultraThinMaterial, in: Capsule())
-        .frame(maxWidth: Metrics.captionMaxWidth)
+        .frame(maxWidth: LensMetrics.captionMaxWidth)
         .opacity(visible ? 1 : 0)
         .onAppear {
             let fade = Animation
-                .easeOut(duration: Metrics.captionFadeDuration)
-                .delay(Metrics.captionFadeDelay)
+                .easeOut(duration: LensMetrics.captionFadeDuration)
+                .delay(LensMetrics.captionFadeDelay)
             withAnimation(fade) {
                 visible = true
             }
@@ -177,7 +62,7 @@ public struct LensView: View {
     private var reduceTransparency
 
     public var body: some View {
-        VStack(spacing: Metrics.captionSpacing) {
+        VStack(spacing: LensMetrics.captionSpacing) {
             lensCircle
             if let caption {
                 CaptionPill(caption: caption)
@@ -187,7 +72,7 @@ public struct LensView: View {
     }
 
     private var contentDiameter: CGFloat {
-        diameter - Metrics.contentInset
+        diameter - LensMetrics.contentInset
     }
 
     /// 135° in the spec: top-left toward bottom-right, the app's single
@@ -201,6 +86,8 @@ public struct LensView: View {
             contentLayer
                 .frame(width: contentDiameter, height: contentDiameter)
                 .clipShape(Circle())
+                // Target swap: cross-fade through the empty state (design §4).
+                .animation(LensMotion.swapFade, value: content.kind)
             vignette
             innerGlassEdge
             rim
@@ -210,9 +97,11 @@ public struct LensView: View {
         .compositingGroup()
         .shadow(
             color: .black.opacity(
-                colorScheme == .dark ? Metrics.shadowOpacityDark : Metrics.shadowOpacityLight,
+                colorScheme == .dark
+                    ? LensMetrics.shadowOpacityDark
+                    : LensMetrics.shadowOpacityLight,
             ),
-            radius: Metrics.shadowRadius,
+            radius: LensMetrics.shadowRadius,
             x: 0,
             y: 0,
         )
@@ -238,7 +127,7 @@ public struct LensView: View {
             ZStack {
                 Color.stageBackground
                 Image(systemName: "chart.bar.fill")
-                    .font(.system(size: Metrics.placeholderGlyphSize))
+                    .font(.system(size: LensMetrics.placeholderGlyphSize))
                     .foregroundStyle(Color.brassPrimary)
                     .accessibilityHidden(true)
             }
@@ -256,9 +145,9 @@ public struct LensView: View {
                 VisualEffectView(material: .hudWindow)
             }
             Image(systemName: "circle.dashed")
-                .font(.system(size: Metrics.emptySymbolSize))
+                .font(.system(size: LensMetrics.emptySymbolSize))
                 .foregroundStyle(Color(nsColor: .secondaryLabelColor))
-                .opacity(Metrics.emptySymbolOpacity)
+                .opacity(LensMetrics.emptySymbolOpacity)
                 .accessibilityHidden(true)
         }
     }
@@ -267,12 +156,12 @@ public struct LensView: View {
         RadialGradient(
             stops: [
                 .init(color: .clear, location: 0),
-                .init(color: .clear, location: Metrics.vignetteClearRadius),
-                .init(color: .black.opacity(Metrics.vignetteEdgeOpacity), location: 1),
+                .init(color: .clear, location: LensMetrics.vignetteClearRadius),
+                .init(color: .black.opacity(LensMetrics.vignetteEdgeOpacity), location: 1),
             ],
             center: .center,
             startRadius: 0,
-            endRadius: contentDiameter / Metrics.radiusDivisor,
+            endRadius: contentDiameter / LensMetrics.radiusDivisor,
         )
         .frame(width: contentDiameter, height: contentDiameter)
         .clipShape(Circle())
@@ -283,14 +172,17 @@ public struct LensView: View {
     /// border, so the stroke is faded by a 135° gradient instead.
     private var innerGlassEdge: some View {
         Circle()
-            .strokeBorder(Color.white, lineWidth: Metrics.innerEdgeWidth)
+            .strokeBorder(Color.white, lineWidth: LensMetrics.innerEdgeWidth)
             .frame(width: contentDiameter, height: contentDiameter)
             .mask(
                 LinearGradient(
                     stops: [
-                        .init(color: .white.opacity(Metrics.innerEdgeTopOpacity), location: 0),
-                        .init(color: .clear, location: Metrics.rimMidStop),
-                        .init(color: .white.opacity(Metrics.innerEdgeBottomOpacity), location: 1),
+                        .init(color: .white.opacity(LensMetrics.innerEdgeTopOpacity), location: 0),
+                        .init(color: .clear, location: LensMetrics.rimMidStop),
+                        .init(
+                            color: .white.opacity(LensMetrics.innerEdgeBottomOpacity),
+                            location: 1,
+                        ),
                     ],
                     startPoint: lightSweep.start,
                     endPoint: lightSweep.end,
@@ -304,13 +196,13 @@ public struct LensView: View {
                 LinearGradient(
                     stops: [
                         .init(color: .brassBright, location: 0),
-                        .init(color: .brassMid, location: Metrics.rimMidStop),
+                        .init(color: .brassMid, location: LensMetrics.rimMidStop),
                         .init(color: .brassDeep, location: 1),
                     ],
                     startPoint: lightSweep.start,
                     endPoint: lightSweep.end,
                 ),
-                lineWidth: Metrics.rimWidth,
+                lineWidth: LensMetrics.rimWidth,
             )
             .frame(width: diameter, height: diameter)
     }
@@ -320,15 +212,15 @@ public struct LensView: View {
     private var specularHighlight: some View {
         Circle()
             .trim(
-                from: Metrics.specularStartDegrees / Metrics.fullTurnDegrees,
-                to: Metrics.specularEndDegrees / Metrics.fullTurnDegrees,
+                from: LensMetrics.specularStartDegrees / LensMetrics.fullTurnDegrees,
+                to: LensMetrics.specularEndDegrees / LensMetrics.fullTurnDegrees,
             )
             .stroke(
-                Color.white.opacity(Metrics.specularOpacity),
-                lineWidth: Metrics.specularWidth,
+                Color.white.opacity(LensMetrics.specularOpacity),
+                lineWidth: LensMetrics.specularWidth,
             )
             .frame(width: diameter, height: diameter)
-            .blur(radius: Metrics.specularBlur)
+            .blur(radius: LensMetrics.specularBlur)
     }
 
     /// Creates a lens; `caption` is nil in every state but a streaming peek.
