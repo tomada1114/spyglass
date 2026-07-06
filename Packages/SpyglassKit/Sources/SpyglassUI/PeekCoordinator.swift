@@ -215,6 +215,10 @@ public final class PeekCoordinator {
             nil
         }
         guard resolved != machineTarget else {
+            // The cursor is back over the streamed window: a swap scheduled
+            // during the sweep must not fire late and steal the stream.
+            debounceTimer?.cancel()
+            debounceTimer = nil
             return
         }
         guard machineTarget != nil else {
