@@ -53,6 +53,9 @@ private struct BrassButtonStyle: ButtonStyle {
 /// Relaunch variant — same size and style, different label and action).
 struct BrassCTAButton: View {
     let title: String
+    /// Applied to the `Button` element itself so XCUITest's `app.buttons`
+    /// query finds it (an identifier on a wrapper view does not surface).
+    let identifier: String
     let action: () -> Void
 
     @State private var hovering = false
@@ -61,5 +64,6 @@ struct BrassCTAButton: View {
         Button(title, action: action)
             .buttonStyle(BrassButtonStyle(hovering: hovering))
             .onHover { hovering = $0 }
+            .accessibilityIdentifier(identifier)
     }
 }

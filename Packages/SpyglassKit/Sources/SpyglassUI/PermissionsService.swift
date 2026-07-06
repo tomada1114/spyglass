@@ -33,17 +33,24 @@ public final class PermissionsService {
     /// started — the ingredient for `grantedThisSession`.
     @ObservationIgnored private let screenRecordingAtLaunch: Bool
 
+    /// Test-determinism shim: TCC grants are inherited from the responsible
+    /// process (the terminal, Xcode, or the XCUITest runner), so "fresh
+    /// build has no permissions" is not true under automation. Simulating
+    /// denial pins the launch test to the real first-launch path.
+    @ObservationIgnored private let simulatingDeniedPermissions: Bool
+
     @ObservationIgnored private var pollTimer: Timer?
     @ObservationIgnored private var accessibilityObserver: (any NSObjectProtocol)?
 
     /// Captures the launch-time permission state and subscribes to the
     /// Accessibility change notification for the app's lifetime.
-    public init() {
-        let screenRecording = CGPreflightScreenCaptureAccess()
+    public init(simulatingDeniedPermissions: Bool = false) {
+        self.simulatingDeniedPermissions = simulatingDeniedPermissions
+        let screenRecording = !simulatingDeniedPermissions && CGPreflightScreenCaptureAccess()
         screenRecordingAtLaunch = screenRecording
         model = PermissionsModel(
             screenRecording: screenRecording,
-            accessibility: AXIsProcessTrusted(),
+            accessibility: !simulatingDeniedPermissions && AXIsProcessTrusted(),
             grantedThisSession: false,
         )
         accessibilityObserver = DistributedNotificationCenter.default().addObserver(
@@ -62,6 +69,9 @@ public final class PermissionsService {
 
     /// Re-reads both permissions and republishes the model.
     public func refresh() {
+        guard !simulatingDeniedPermissions else {
+            return
+        }
         let screenRecording = CGPreflightScreenCaptureAccess()
         model = PermissionsModel(
             screenRecording: screenRecording,

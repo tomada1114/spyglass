@@ -46,7 +46,6 @@ public struct OnboardingView: View {
         .padding(.bottom, Metrics.bottomPadding)
         .padding(.horizontal, Metrics.horizontalPadding)
         .frame(width: Metrics.width, height: Metrics.height)
-        .accessibilityIdentifier("onboardingWindow")
     }
 
     private var header: some View {
@@ -119,10 +118,10 @@ public struct OnboardingView: View {
         VStack(spacing: Metrics.rowSpacing) {
             BrassCTAButton(
                 title: cta == .relaunch ? "Relaunch Spyglass" : "Start peeking",
+                identifier: "startPeekingButton",
                 action: performCTA,
             )
             .disabled(cta == .disabled)
-            .accessibilityIdentifier("startPeekingButton")
             if cta == .relaunch {
                 Text("Screen Recording needs a quick relaunch to take effect.")
                     .font(.system(size: Metrics.relaunchNoteSize))

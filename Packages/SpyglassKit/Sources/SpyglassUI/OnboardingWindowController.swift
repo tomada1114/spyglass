@@ -74,6 +74,9 @@ public final class OnboardingWindowController: NSObject, NSWindowDelegate {
         onboardingWindow.titleVisibility = .hidden
         onboardingWindow.isReleasedWhenClosed = false
         onboardingWindow.delegate = self
+        // The window-content identifier lives on the AppKit view: a SwiftUI
+        // root-level accessibilityIdentifier would cascade onto every child
+        // element and clobber the CTA/row identifiers.
         onboardingWindow.contentViewController = NSHostingController(
             rootView: OnboardingView(
                 permissions: permissions,
@@ -84,6 +87,7 @@ public final class OnboardingWindowController: NSObject, NSWindowDelegate {
                 self?.window?.close()
             },
         )
+        onboardingWindow.contentView?.setAccessibilityIdentifier("onboardingWindow")
         return onboardingWindow
     }
 

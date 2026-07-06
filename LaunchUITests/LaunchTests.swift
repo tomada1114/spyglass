@@ -1,9 +1,11 @@
 import XCTest
 
-/// The template's launch guarantee: the app starts, shows its window, and responds.
+/// The template's launch guarantee: the app starts and, with no TCC
+/// permissions granted (the deterministic state of a fresh build), shows
+/// the onboarding window with its CTA disabled.
 ///
-/// XCTest by necessity — Apple has not ported UI automation to Swift Testing.
-/// All other tests use Swift Testing in Packages/SpyglassKit.
+/// XCTest by necessity — Apple has not ported UI automation to Swift
+/// Testing. All other tests use Swift Testing in Packages/SpyglassKit.
 final class LaunchTests: XCTestCase {
     private enum Timeout {
         static let windowAppears: TimeInterval = 10
@@ -11,27 +13,23 @@ final class LaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testAppLaunchesAndShowsCounter() {
+    func testAppLaunchesAndShowsOnboarding() {
         // A failed launch assertion should end the test immediately instead of
         // cascading through the remaining waits against a dead app.
         continueAfterFailure = false
 
         let app = XCUIApplication()
+        // XCUITest cannot see windows of an LSUIElement app; this flips the
+        // activation policy at launch (a test-visibility shim in the app).
+        app.launchEnvironment["XCUI_TEST"] = "1"
         app.launch()
         XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: Timeout.windowAppears))
 
-        let counter = app.staticTexts["counterValue"]
-        XCTAssertTrue(counter.waitForExistence(timeout: Timeout.elementAppears))
-
-        app.buttons["incrementButton"].click()
-        // macOS exposes a SwiftUI Text's string as `value` (sometimes `label`),
-        // and the update is asynchronous — wait on a predicate covering both.
-        let showsOne = NSPredicate(format: "label == '1' OR value == '1'")
-        let updated = XCTNSPredicateExpectation(predicate: showsOne, object: counter)
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [updated], timeout: Timeout.elementAppears),
-            .completed,
-            "counterValue should read 1 after clicking increment",
+        let cta = app.buttons["startPeekingButton"]
+        XCTAssertTrue(cta.waitForExistence(timeout: Timeout.elementAppears))
+        XCTAssertFalse(
+            cta.isEnabled,
+            "the CTA must stay disabled until both permissions are granted",
         )
     }
 }
