@@ -54,9 +54,14 @@ struct PermissionRow: View {
             in: RoundedRectangle(cornerRadius: Metrics.cornerRadius),
         )
         .animation(.easeInOut(duration: Metrics.grantedFadeSeconds), value: granted)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(title): \(granted ? "granted" : "not granted")")
         .accessibilityIdentifier(identifier)
+        .onChange(of: granted) { _, isGranted in
+            if isGranted {
+                AccessibilityNotification.Announcement("\(title): granted").post()
+            }
+        }
     }
 
     private var iconContainer: some View {
@@ -86,6 +91,9 @@ struct PermissionRow: View {
         } else {
             Button(alreadyRequested ? "Open System Settings…" : "Grant", action: onGrant)
                 .buttonStyle(.bordered)
+                .accessibilityLabel(
+                    "\(title): \(alreadyRequested ? "Open System Settings" : "Grant")",
+                )
         }
     }
 }
