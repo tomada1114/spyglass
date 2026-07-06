@@ -16,6 +16,15 @@ public enum KeyCodes {
 /// Redefined here (rather than imported) because Core must stay free of
 /// AppKit; the raw values are ABI-stable Carbon-era constants.
 public struct KeyModifiers: OptionSet, Sendable {
+    /// Device-dependent left/right ⌘ bits (`NX_DEVICELCMDKEYMASK` /
+    /// `NX_DEVICERCMDKEYMASK`, Carbon-era stable, carried in
+    /// `NSEvent.modifierFlags`). Both ⌘ keys share the one
+    /// device-independent `.command` bit, so these are the only way to tell
+    /// "right ⌘ released" from "right ⌘ still down" while the left ⌘ is
+    /// held. Deliberately excluded from ``decisionRelevant``: they refine
+    /// right-⌘ decisions but must never cancel the other triggers.
+    public static let deviceLeftCommand = Self(rawValue: 1 << 3)
+    public static let deviceRightCommand = Self(rawValue: 1 << 4)
     public static let capsLock = Self(rawValue: 1 << 16)
     public static let shift = Self(rawValue: 1 << 17)
     public static let control = Self(rawValue: 1 << 18)

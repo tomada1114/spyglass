@@ -34,12 +34,7 @@ public struct TriggerKeyClassifier: Sendable {
             .intersection(.decisionRelevant)
         switch trigger {
         case .rightCommand:
-            return classifySingleKey(
-                snapshot.keyCode,
-                expectedCode: KeyCodes.rightCommand,
-                flag: .command,
-                held: held,
-            )
+            return classifyRightCommand(snapshot, held: held)
 
         case .fnKey:
             return classifySingleKey(
@@ -56,6 +51,33 @@ public struct TriggerKeyClassifier: Sendable {
             }
             return held.isSubset(of: chord) ? .released : .cancelled
         }
+    }
+
+    /// Right ⌘ with the left ⌘ also down is ambiguous in the
+    /// device-independent flags (both keys share `.command`), so the
+    /// device-dependent bits break the tie: without them, releasing the
+    /// right ⌘ under a held left ⌘ would re-read as an engagement and the
+    /// lens could stick open. Events that carry no device bits (synthetic
+    /// senders) fall through to the plain single-key logic unchanged.
+    private func classifyRightCommand(
+        _ snapshot: KeyEventSnapshot,
+        held: KeyModifiers,
+    ) -> TriggerDecision {
+        let raw = KeyModifiers(rawValue: snapshot.rawModifierFlags)
+        let leftDown = raw.contains(.deviceLeftCommand)
+        let rightDown = raw.contains(.deviceRightCommand)
+        if snapshot.keyCode == KeyCodes.rightCommand, held == .command, leftDown {
+            return rightDown ? .cancelled : .released
+        }
+        if snapshot.keyCode == KeyCodes.leftCommand, leftDown, rightDown {
+            return .cancelled
+        }
+        return classifySingleKey(
+            snapshot.keyCode,
+            expectedCode: KeyCodes.rightCommand,
+            flag: .command,
+            held: held,
+        )
     }
 
     /// Shared logic for the single-key triggers (right ⌘ and fn), which need

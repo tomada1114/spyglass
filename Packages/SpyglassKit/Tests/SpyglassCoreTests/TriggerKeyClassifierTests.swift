@@ -44,6 +44,33 @@ struct TriggerKeyClassifierTests {
     }
 
     @Test
+    func `right command release while left command is still held is released`() {
+        let event = flagsChanged(
+            keyCode: KeyCodes.rightCommand,
+            flags: [.command, .deviceLeftCommand],
+        )
+        #expect(classifier.classify(event, trigger: .rightCommand) == .released)
+    }
+
+    @Test
+    func `right command press while left command is held is cancelled`() {
+        let event = flagsChanged(
+            keyCode: KeyCodes.rightCommand,
+            flags: [.command, .deviceLeftCommand, .deviceRightCommand],
+        )
+        #expect(classifier.classify(event, trigger: .rightCommand) == .cancelled)
+    }
+
+    @Test
+    func `left command press while right command is held is cancelled`() {
+        let event = flagsChanged(
+            keyCode: KeyCodes.leftCommand,
+            flags: [.command, .deviceLeftCommand, .deviceRightCommand],
+        )
+        #expect(classifier.classify(event, trigger: .rightCommand) == .cancelled)
+    }
+
+    @Test
     func `right command with another modifier held is cancelled`() {
         let event = flagsChanged(keyCode: KeyCodes.rightCommand, flags: [.command, .shift])
         #expect(classifier.classify(event, trigger: .rightCommand) == .cancelled)
