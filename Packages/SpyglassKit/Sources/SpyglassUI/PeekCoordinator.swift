@@ -148,7 +148,11 @@ public final class PeekCoordinator {
             capture.stop()
             latestImage = nil
             currentTarget = nil
-            overlay.update(content: .empty, caption: nil)
+            // On a click-to-raise the lens keeps the raised content through
+            // the flash (design §4 State C); only a plain swap blanks it.
+            if !raising {
+                overlay.update(content: .empty, caption: nil)
+            }
 
         case let .raiseTarget(id):
             if let target = windowsByID[id] {
