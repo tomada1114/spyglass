@@ -1,21 +1,40 @@
-# spyglass
+# Spyglass
 
 [![CI](https://github.com/tomada1114/spyglass/actions/workflows/ci.yml/badge.svg)](https://github.com/tomada1114/spyglass/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/tomada1114/spyglass/badge)](https://scorecard.dev/viewer/?uri=github.com/tomada1114/spyglass)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A strict, supply-chain-hardened GitHub template for open-source macOS apps.
-It ships as a working counter app: XcodeGen project, thin app shell over a
-local Swift package, Swift Testing suite with an enforced coverage floor, an
-XCUITest launch guarantee, and hardened CI — all from the first commit.
+Hold a key, see through your front window; release, and it never happened.
 
-Most popular OSS macOS apps ship without CI-gated tests, SECURITY.md,
-Dependabot, or pinned actions. This template starts with all of them.
+Spyglass is a free, open-source macOS menu bar utility. While you hold the
+trigger key, a circular lens follows your cursor and shows the **live**
+content of the window hidden directly beneath the frontmost one — as if a
+hole were cut through it. No minimizing, no Mission Control, no destroyed
+window arrangement.
 
-**Starting your own app from this template?** Jump to
-[Using This Template](#using-this-template).
+- **Hold right ⌘** (or ⌃⌥ / fn, configurable) — the lens appears after a
+  150 ms hold and follows your cursor
+- **Live, not a screenshot** — occluded windows stream their real content at
+  30 fps via ScreenCaptureKit
+- **Click through the lens** to raise and activate the revealed window
+- **Exactly one layer deep** — a deliberate, predictable mental model
+- **Invisible until summoned** — no Dock icon, no windows, zero idle CPU
+- macOS 14+, Apple Silicon + Intel, MIT-licensed
 
-## Quickstart
+## Permissions
+
+Spyglass needs two system permissions, requested once during onboarding:
+
+- **Screen Recording** — required by ScreenCaptureKit to show window
+  content. macOS applies a grant only after an app relaunch; onboarding
+  offers the relaunch button when needed.
+- **Accessibility** — required to observe the global trigger key and to
+  raise the revealed window on click.
+
+Spyglass never records, stores, or transmits anything; frames go straight
+from ScreenCaptureKit to the lens on screen.
+
+## Building from Source
 
 Prerequisites: Xcode 26.5+, [mise](https://mise.jdx.dev/), and
 [Just](https://just.systems) (`brew install mise just`).
@@ -26,13 +45,15 @@ cd spyglass
 mise trust     # approve mise.toml once — mise refuses untrusted configs
 just install   # pinned tools via mise + git hooks + xcodegen generate
 just check     # format → lint → test (80% floor) → build
-open Spyglass.xcodeproj
+just run       # build and launch the app
 ```
 
 ## Design Philosophy
 
-Every choice in this template has a reason. If you disagree with a decision,
-you know exactly what to change and why it was there in the first place.
+Spyglass is built from
+[macos-app-template](https://github.com/tomada1114/macos-app-template);
+every infrastructure choice below has a reason. If you disagree with a
+decision, you know exactly what to change and why it was there.
 
 ### Why XcodeGen with a gitignored `.xcodeproj`?
 
@@ -94,55 +115,6 @@ configured it signs, notarizes, and staples, otherwise it ad-hoc signs and
 says so loudly. The template works on day one without an Apple Developer
 Program membership, and upgrades to fully trusted distribution by adding
 secrets — no workflow edits. See docs/distribution.md.
-
-## Using This Template
-
-1. Click **"Use this template"** on GitHub and clone your new repository
-   (the bootstrap script enumerates files with `git ls-files`, so it needs a
-   git checkout — a ZIP download must be `git init`-ed first)
-2. Run the bootstrap script to rename everything:
-
-   ```bash
-   scripts/bootstrap.sh CoolApp \
-     --bundle-id-prefix io.example --github-user janedoe \
-     --author "Jane Doe" --email jane@example.com
-   ```
-
-   This replaces `Spyglass` (and `SpyglassKit`/`SpyglassCore`/`SpyglassUI`), `spyglass`,
-   `io.github.tomada1114`, `tomada1114`, `tomada`, and `tmasuyama1114@gmail.com` across
-   all tracked files, renames the matching paths, and regenerates the Xcode
-   project. Omitted optional arguments leave their placeholders as-is.
-3. Verify the rename: `just install && just check`
-4. Update `README.md` (this file), `SECURITY.md`, and `CLAUDE.md` for your
-   app, and review `LICENSE`'s copyright line (`CHANGELOG.md` is reset
-   automatically)
-5. Replace the counter placeholder in `Packages/<YourApp>Kit` with real code —
-   keep the Core/UI split and the tests
-6. For signed releases, add the secrets listed in docs/distribution.md
-
-To find any placeholders the script left untouched (the pattern uses `.`
-wildcards so the rename cannot rewrite this very command into your new names):
-
-```bash
-rg -i "my.?app|com\.example|your.username|Your.Name|you@example"
-```
-
-### Keeping up with template updates
-
-A repository generated from a GitHub template has no upstream link — the files
-are copied once. To pull later template improvements (CI hardening, lint-rule
-bumps, workflow fixes) into your app:
-
-```bash
-git remote add template https://github.com/tomada1114/macos-app-template.git
-git fetch template
-git cherry-pick <sha>    # or: git merge template/main --allow-unrelated-histories
-```
-
-Cherry-picking narrowly scoped commits is usually cleaner than a full merge:
-the bootstrap rename means most template commits touch files whose names and
-contents differ in your repository. Treat the template as a starting point,
-not a dependency — adopt the changes that earn their place.
 
 ## Development
 
