@@ -130,12 +130,29 @@ final class CaptureEngine: NSObject, SCStreamDelegate, SCStreamOutput {
     /// 30 fps, no cursor, pixel size = window points × display scale
     /// (`docs/requirements.md` §2.1).
     private func configuration(for window: SCWindow) -> SCStreamConfiguration {
-        let scale = NSScreen.main?.backingScaleFactor ?? Config.fallbackScale
+        let scale = displayScale(for: window)
         let config = SCStreamConfiguration()
         config.minimumFrameInterval = CMTime(value: 1, timescale: Config.framesPerSecond)
         config.showsCursor = false
         config.width = Int(window.frame.width * scale)
         config.height = Int(window.frame.height * scale)
         return config
+    }
+
+    /// Backing scale of the display the target window mostly sits on
+    /// (requirements §2.1: the scale is the *target's* display, not the main
+    /// one). `window.frame` is CG top-left space, so flip it to AppKit before
+    /// intersecting the NSScreen frames.
+    private func displayScale(for window: SCWindow) -> CGFloat {
+        let frameAppKit = LensGeometry.cgToAppKit(
+            rect: window.frame,
+            mainDisplayHeight: NSScreen.screens.first?.frame.height ?? 0,
+        )
+        let best = NSScreen.screens.max { lhs, rhs in
+            let lhsArea = lhs.frame.intersection(frameAppKit)
+            let rhsArea = rhs.frame.intersection(frameAppKit)
+            return lhsArea.width * lhsArea.height < rhsArea.width * rhsArea.height
+        }
+        return best?.backingScaleFactor ?? Config.fallbackScale
     }
 }
