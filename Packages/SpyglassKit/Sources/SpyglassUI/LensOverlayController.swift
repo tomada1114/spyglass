@@ -84,14 +84,25 @@ private struct LensRootView: View {
         }
     }
 
-    /// Rim flash to brassBright during click-to-raise (Reduce Motion keeps
-    /// the flash, drops the scale pulse — wireframes §6.2).
+    /// Rim + specular arc flash to brassBright during click-to-raise
+    /// (design §4: "rim & highlight animate to brassBright"). The arc reuses
+    /// LensView's specular geometry so the caught light brightens in place.
+    /// Reduce Motion keeps the flash, drops the scale pulse — wireframes §6.2.
     @ViewBuilder private var flashRing: some View {
         if model.phase == .flashing {
-            Circle()
-                .strokeBorder(Color.brassBright, lineWidth: Overlay.flashRimWidth)
-                .frame(width: model.diameter, height: model.diameter)
-                .transition(.opacity)
+            ZStack {
+                Circle()
+                    .strokeBorder(Color.brassBright, lineWidth: Overlay.flashRimWidth)
+                Circle()
+                    .trim(
+                        from: LensMetrics.specularStartDegrees / LensMetrics.fullTurnDegrees,
+                        to: LensMetrics.specularEndDegrees / LensMetrics.fullTurnDegrees,
+                    )
+                    .stroke(Color.brassBright, lineWidth: LensMetrics.specularWidth)
+                    .blur(radius: LensMetrics.specularBlur)
+            }
+            .frame(width: model.diameter, height: model.diameter)
+            .transition(.opacity)
         }
     }
 }
