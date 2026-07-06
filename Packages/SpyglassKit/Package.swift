@@ -17,7 +17,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "SpyglassCore", swiftSettings: strictSettings),
-        .target(name: "SpyglassUI", dependencies: ["SpyglassCore"], swiftSettings: strictSettings),
+        .target(
+            name: "SpyglassUI",
+            dependencies: ["SpyglassCore"],
+            resources: [.process("Assets.xcassets")],
+            swiftSettings: strictSettings,
+        ),
         .testTarget(
             name: "SpyglassCoreTests",
             dependencies: ["SpyglassCore"],
