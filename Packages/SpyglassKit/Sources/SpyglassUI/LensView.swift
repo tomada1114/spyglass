@@ -143,9 +143,10 @@ private struct CaptionPill: View {
         }
         .padding(.horizontal, Metrics.captionHorizontalPadding)
         .frame(height: Metrics.captionHeight)
-        .frame(maxWidth: Metrics.captionMaxWidth)
-        .fixedSize()
+        // Background before the width cap so the capsule hugs short titles;
+        // the outer frame only limits the proposal (→ middle truncation).
         .background(.ultraThinMaterial, in: Capsule())
+        .frame(maxWidth: Metrics.captionMaxWidth)
         .opacity(visible ? 1 : 0)
         .onAppear {
             let fade = Animation
