@@ -12,6 +12,12 @@ private enum Overlay {
     static let flashRimWidth: CGFloat = 2
     /// Diameter → radius divisor.
     static let radiusDivisor: CGFloat = 2
+    /// Breathing room around the circle so the design §4 omnidirectional
+    /// shadow (radius 12, offset 0,0) is not clipped by the panel edge;
+    /// 2× the shadow radius. The caption strip already covers the bottom.
+    static let shadowMargin: CGFloat = 24
+    /// Multiplier for a margin applied to both the left and right sides.
+    static let bothSides: CGFloat = 2
 }
 
 /// Presentation phase driving the overlay's appear/dismiss/flash motion.
@@ -48,9 +54,13 @@ private struct LensRootView: View {
             .scaleEffect(reduceMotion ? 1 : scale, anchor: .center)
             .opacity(model.phase == .hidden || model.phase == .dismissing ? 0 : 1)
             .animation(animation, value: model.phase)
+            // Inset the lens so its omnidirectional shadow has room to spill
+            // past the top and sides; the caption strip covers the bottom.
+            .padding(.top, Overlay.shadowMargin)
+            .padding(.horizontal, Overlay.shadowMargin)
             .frame(
-                width: model.diameter,
-                height: model.diameter + Overlay.captionArea,
+                width: model.diameter + Overlay.bothSides * Overlay.shadowMargin,
+                height: model.diameter + Overlay.shadowMargin + Overlay.captionArea,
                 alignment: .top,
             )
     }
@@ -185,13 +195,15 @@ final class LensOverlayController {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
-    /// Panel = lens circle + caption strip below it.
+    /// Panel = lens circle + a shadow margin on the top and sides + the
+    /// caption strip below. The circle's top-left still lands on `lensRect`
+    /// because the extra margin is absorbed by the panel origin and padding.
     private func panelFrame(for lensRect: CGRect) -> CGRect {
         CGRect(
-            x: lensRect.minX,
+            x: lensRect.minX - Overlay.shadowMargin,
             y: lensRect.minY - Overlay.captionArea,
-            width: lensRect.width,
-            height: lensRect.height + Overlay.captionArea,
+            width: lensRect.width + Overlay.bothSides * Overlay.shadowMargin,
+            height: lensRect.height + Overlay.captionArea + Overlay.shadowMargin,
         )
     }
 
@@ -220,7 +232,7 @@ final class LensOverlayController {
     /// circle raise the target.
     private func handleClick(at location: NSPoint) {
         let radius = model.diameter / Overlay.radiusDivisor
-        let center = NSPoint(x: radius, y: Overlay.captionArea + radius)
+        let center = NSPoint(x: Overlay.shadowMargin + radius, y: Overlay.captionArea + radius)
         let distance = hypot(location.x - center.x, location.y - center.y)
         if distance <= radius {
             onClickInsideLens?()
