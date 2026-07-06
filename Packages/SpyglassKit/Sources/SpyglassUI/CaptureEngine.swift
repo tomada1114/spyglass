@@ -88,7 +88,7 @@ final class CaptureEngine: NSObject, SCStreamDelegate, SCStreamOutput {
     }
 
     nonisolated func stream(
-        _: SCStream,
+        _ sourceStream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType,
     ) {
@@ -100,7 +100,13 @@ final class CaptureEngine: NSObject, SCStreamDelegate, SCStreamOutput {
         else {
             return
         }
+        let source = ObjectIdentifier(sourceStream)
         Task { @MainActor in
+            // Drop late frames from an outgoing stream so a swap never renders
+            // window A's pixels cropped as window B.
+            guard self.stream.map(ObjectIdentifier.init) == source else {
+                return
+            }
             self.onFrame?(image)
         }
     }
